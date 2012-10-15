@@ -1,0 +1,317 @@
+//eve - 自动行星带刷怪 - 脚本 （1）
+//大漠插件。字库在下一篇。通过“人物和地点”窗口指定几个星系。通过其星系时候，自动判断是否有其他的玩家。没有玩家就开始跳跃杀怪。有的话进入下一个星系。。
+//武器定位描述 ：中1，推进器 中2，护盾回充  底1，损伤控制 底2，盔甲回充 高6，牵引光束
+//本地聊天框务必单独显示，且调到最小显示状态
+set dm = createobject("dm.dmsoft")
+dm_ret = dm.SetPath("F:\按键精灵8\2.1138")
+dm_ret = dm.SetDict(0, "eve小星行带.txt")
+Dim x, y
+//最多杀敌上限，敌人数,攻击那类敌人
+Dim enemyNumQuota,enemyNums,AttackType
+enemyNumQuota = 5
+AttackType="中|大"
+//Uav状态是否执行释放 || WeaponNums武器个数，执行循环武器检查必要参数，换船和武器有必要检查 || Ammunition补充弹药类型
+Dim UAV
+Dim WeaponNums
+Dim Ammunition,Ammunition1
+WeaponNums = 4
+Ammunition = "博弹"
+//武器发射时间。影响“ 监视武器状态”子程序。如果监视不理想。将影响武器使用效率，暂时取发射速率一般值
+Dim weaponTime
+weaponTime = 6000/2
+// 加载X 变量 字符串类型，有几个要刷的行星带就要设定为几
+Dim jumpType
+Dim loadType
+Dim for星带数
+Dim itemsBoxName1,itemsBoxName2
+Call lib.My_常用.获取屏幕高宽度
+// 全局坐标定位
+dm_ret = dm.FindStr(0,0,x,y,"右上","0.0.89-0.0.10",1.0,x11,y11)
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"选中的物体","200.4.79-200.14.19",1.0,x8,y8)
+dm_ret = dm.FindStr(0,0,x,y,"武器定位右","200.1.92-200.1.10",1.0,x14,y14)
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"总览","207.4.80-207.4.10",1.0,x5,y5)
+dm_ret = dm.FindStr(0,0,x,y,"本地聊天框","207.4.79-207.4.9",1.0,x44,y44)
+If x11 > 0 and x8 > 0 and x14 > 0 and x5 > 0 and x40>0 Then
+else
+    //        MessageBox "有一个全局坐标定位没找到,必须使船在宇宙中才能获得所有坐标"
+    //        Goto Script_End
+End If
+//
+//Call 行星带刷怪()
+
+//EndScript
+Rem Script_Start
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"星带位标","240.1.75-240.1.10",1.0,x27,y27)
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"仓库","0.0.76-0.0.10|60.98.76-60.98.10",1.0,x42,y42)
+for恒星系数 = CInt((y42 - y27)/19)-1
+Rem temp_主1
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"星带位标","240.1.75-240.1.10",1.0,x27,y27)
+If x27 > 0 Then
+    MoveTo x27 + 50,y27 + 7 + for恒星系数 * 19
+    Call 右键单击()
+    Delay 500
+    dm_ret = dm.FindStr(x27 ,y27 ,x ,y ,"设置为终点","207.4.80-207.4.10",1.0,x28,y28)
+    If x28 > 0 Then
+        jumpType ="jump刷怪"
+        MoveTo x28,y28
+        Call 左键单击()
+        Call Jump1()
+        Rem 仓库清空整理后_00海盗_跳到此处
+    End If
+    for恒星系数 = for恒星系数 -1
+    If for恒星系数 > 0 Then
+        Goto temp_主1
+    End If
+End If
+Goto Script_Start
+Rem Script_End
+EndScript
+
+Sub Jump1()
+    loadType = "加载跳"
+    Call 加载X()
+    Delay 1000
+    Rem temp跳跃
+    FindColorEx x5,y5,x,y,"FFFF",0,0.9,x31,y31
+    If x31 > 0 Then
+        MoveTo x31+50,y31
+        Call 右键单击()
+        Delay 500
+        dm_ret = dm.FindStr(x5 ,y5 ,x ,y ,"跃迁至","207.4.79-207.4.10",1.0,x33,y33)
+        If x33 > 0 Then
+            MoveTo x33,y33
+            Call 左键单击()
+            Delay 30000
+        End If
+        dm_ret = dm.FindStr(x5 ,y5 ,x ,y ,"跳跃","207.4.79-207.4.10",1.0,x36,y36)
+        If x36>0 Then
+            If         jumpType ="jump刷怪" Then
+            Delay 3000
+            MoveTo x36,y36
+            Call 左键单击()
+            Delay 15000
+             //星域是否有第二个玩家
+                dm_ret = dm.FindColor(x44 + 90 , y44 + 70 , x44 + 230,y44 + 100,"b1b1b1-000000|bfbfbf-000000",1.0,0,x41,y41)
+                         //无第二个玩家
+            If x41 <= 0 Then
+                    Call 行星带刷怪()
+                            Call Jump1()
+End If
+                End If
+            If         jumpType ="jump仓库" Then
+                        MoveTo x36,y36
+                            Call 左键单击()
+                            Delay 3000
+End If
+        End If
+    else
+        dm_ret = dm.FindStr(0 ,0 ,x ,y ,"当前目的地","207.4.79-207.4.10",1.0,x39,y39)
+        If x39 > 0 Then
+            Goto temp跳跃
+        End If
+        Goto temp跳跃End
+    End If
+    Goto temp跳跃
+    Rem temp跳跃End
+    Delay 6000
+End Sub
+
+Sub 有怪_条件开打()
+    dm_ret = dm.FindStr(x5 - 10 ,y5 ,x ,y ,AttackType,"0.90.75-0.90.15",1.0,x6,y6)
+    If x6 >= 0 Then
+        //统计怪物个数
+        s = dm.Ocr(x5 - 10 ,y5 + 19 ,x ,y ,"0.90.75-0.90.10",1.0)
+        enemyNums = Len(s)
+        //敌人是否在可战胜范围内 ,str2 巡洋舰 。 str1 战列舰
+        str1=split(s,"中")
+        str2=split(s,"大")
+        SayString ubound(str1)
+        SayString ubound(str2)
+        If enemyNums <= enemyNumQuota Then
+            If ubound(str2) < 1 and ubound(str1) < 3 Then
+                Call 战斗中()
+            End If
+//                        If ubound(str2) < 2 and ubound(str1) < 1 Then
+//                            Call 战斗中()
+//                        End If
+        End If
+    End If
+    Call 加血()
+End Sub
+Sub 警惕0_0海盗()
+    //        dm_ret = dm.FindColor(x40 + 60 , y40 + 70 , x40 + 230,y40 + 100,"b1b1b1-000000|b2b2b2-000000|bfbfbf-000000|bdbdbd-000000",1.0,0,x41,y41)
+    dm_ret = dm.FindColor(x44 + 90 , y44 + 70 , x44 + 230,y44 + 100,"b1b1b1-000000|bfbfbf-000000",1.0,0,x41,y41)
+    If x41>0 Then
+        SayString "_+"
+        Call 无人机返回快捷()
+        Rem temp警惕0_0海盗
+        dm_ret = dm.FindStr(0,0,x,y,"无人返回中","60.100.100-60.100.10",1.0,x20,y20)
+        If x20> 0 Then
+            Delay 1000
+            Goto temp警惕0_0海盗
+        End If
+        Call 填充弹药快捷()
+                dm_ret = dm.FindStr(0 ,0 ,x ,y ,"当前目的地","207.4.79-207.4.10",1.0,x39,y39)
+                If x39 > 0 Then
+        Call Jump1()
+else
+        Goto 仓库清空整理后_00海盗_跳到此处
+                End If
+    End If
+End Sub
+Sub 货柜满仓处理()
+    Call 消除弹出窗口()
+    tempState = ""
+    jumpType = "jump仓库"
+    Rem temp货柜满仓处理1
+    //停靠空间站
+    MoveTo x11 + 51,y11 + 40
+    Call 左键单击()
+    Delay 500
+    //1.回到所处星域的第一个空间站清仓
+    dm_ret = dm.FindStr(x11 + 51,y11 + 40 , x ,y,"空间站","210.1.75-210.4.10",1.0,x23,y23)
+    If x23 > 0 Then
+        MoveTo x23,y23
+        Delay 500
+        MoveTo x23+70,y23
+        Delay 500
+        dm_ret = dm.FindStr(x11 + 51,y11 + 40 , x ,y,"停靠","210.1.75-210.4.10",1.0,x23,y23)
+        MoveTo x23,y23
+        Call 左键单击()
+    else
+        //2.回“仓库”清仓
+        dm_ret = dm.FindStr(0 ,0 ,x ,y ,"仓库","0.0.76-0.0.10|60.98.76-60.98.10",1.0,x42,y42)
+        If x42 > 0 Then
+            MoveTo x42,y42
+            Call 右键单击显示下拉菜单()
+            dm_ret = dm.FindStr(x42 ,y42 ,x ,y ,"设置为终点","207.4.80-207.4.10",1.0,x28,y28)
+            MoveTo x28,y28
+            Call 左键单击()
+            Call Jump()
+            tempState = "仓库清仓完毕"
+            Goto temp货柜满仓处理1
+        else
+            Call Plugin.Media.Beep(521, 2000)
+            MessageBox "没有指定仓库坐标"
+        End If
+    End If
+    //关闭星图
+    KeyPress "F10", 1
+    Rem temp货柜满仓处理
+    dm_ret = dm.FindStr(0 ,0 ,x ,y ,"空间站物品","207.4.79-207.4.9",1.0,x38,y38)
+    If x38 <= 0 Then
+        Delay 2000
+        Goto temp货柜满仓处理
+    End If
+    Delay 5000
+    //进站完毕。清仓到空间站
+    itemsBoxName1 ="我的货柜"
+    itemsBoxName2 = "空间站物品"
+    Call 装载物品()
+    //补充弹药
+    dm_ret = dm.FindStr(0,0,x,y,"空间站物品","207.4.80-207.4.10",1.0,x7,y7)
+    MoveTo x7+146,y7+30
+    Call 左键单击()
+    SayString Ammunition
+    Delay 1000
+    itemsBoxName1 = "空间站物品"
+    itemsBoxName2 ="我的货柜"
+    Call 装载物品()
+    //有维修站就维修
+    MoveTo 630,420
+    Call 右键单击()
+    Delay 500
+    dm_ret = dm.FindStr(0,0,x,y,"获取维修报","207.4.79-207.4.9",1.0,x6,y6)
+    If x6 > 0 Then
+        MoveTo x6  , y6
+        Call 左键单击()
+        Delay 1000
+        dm_ret = dm.FindStr(0,0,x,y,"修理全部","207.4.79-207.4.9",1.0,x6,y6)
+        If x6> 0 Then
+            MoveTo x6  , y6
+            Call 左键单击()
+            Delay 1000
+            Call 消除弹出窗口()
+        End If
+    End If
+    Call 离站()
+    Call 打开星图()
+    Call 出站_跳跃_起始激活()
+            jumpType ="jump刷怪"
+    If tempState = "仓库清仓完毕" Then
+                Goto 仓库清空整理后_00海盗_跳到此处
+    End If
+End Sub
+Sub 行星带刷怪()
+    loadType = "加载带"
+    Call 加载X()
+    loadType = "加载敌"
+    Call 加载X()
+    Call 显示小行星带()
+    dm_ret = dm.FindStr(x11 + 140 , y11 + 40 , x11 +500 ,y,"右小","204.5.80-204.5.10",1.0,x12,y12)
+    If x12 > 0 Then
+        MoveTo x12,y12
+        Call 跃迁()
+        Call 出站_跳跃_起始激活()
+        Call 有怪_条件开打()
+        Call 捡箱子()
+    End If
+    Rem for小行星带
+    Call 显示小行星带()
+    dm_ret = dm.FindStr(x11 + 140 , y12 + 17 , x11 +500 ,y,"右小","204.5.80-204.5.10",1.0,x12,y12)
+    If x12 > 0 Then
+        MoveTo x12,y12
+        Call 跃迁()
+        Call 有怪_条件开打()
+        Call 捡箱子()
+        Goto for小行星带
+    End If
+End Sub
+
+Sub 加载X()
+    MoveTo x5+5,y5+5
+    Call 左键单击()
+    Delay 1000
+    dm_ret = dm.FindStr(x5 ,y5 ,x ,y ,loadType,"207.4.79-207.4.10",1.0,x37,y37)
+    MoveTo x37,y37
+    Call 左键单击()
+    Delay 1000
+End Sub
+
+Sub 加血()
+    FindColorEx x14+7,y14-44,x14+15,y14-36,"1818DC",0,0.9,x27,y27
+    If x27 > 0 Then
+        //打开 加血护盾
+        MoveTo x14 + 130, y14
+        Delay 500
+        dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x17,y17)
+        If x17 > 0 Then
+            Call 左键单击()
+        End If
+    else
+        //关闭 加血护盾
+        MoveTo x14 + 130, y14
+        Delay 500
+        dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x17,y17)
+        If x17 <= 0 Then
+            Call 左键单击()
+        End If
+    End If
+
+End Sub
+
+Sub 出站_跳跃_起始激活()
+    //确保无人机-状态提示平台展开
+    dm_ret = dm.FindStr(0 ,0 ,x ,y ,"没有物品或","204.9.67-204.9.10",1.0,x25,y25)
+    If x25 <= 0 Then
+        dm_ret = dm.FindStr(0 ,0 ,x ,y ,"下","240.0.92-240.0.10",1.0,x26,y26)
+        MoveTo x26, y26+20
+        Call 左键单击()
+    End If
+    MoveTo x14 + 52, y14 + 42
+    Delay 1000
+    dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x17,y17)
+    If x17 > 0 Then
+        Call 左键单击()
+    End If
+End Sub

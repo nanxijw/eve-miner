@@ -1,0 +1,679 @@
+//仓位满了。但是坐标也刚刚删除。。
+//武器定位描述 ：中1，推进器 中2，护盾回充  底1，损伤控制 底2，盔甲回充 高6，牵引光束
+//本地聊天框务必单独显示，且调到最小显示状态
+set dm = createobject("dm.dmsoft")
+dm_ret = dm.SetPath("F:\按键精灵8\2.1138")
+dm_ret = dm.SetDict(0, "eve采矿.txt")
+Dim x, y
+//采矿-武器-发射时间。影响“ 监视武器状态”子程序。如果监视不理想。将影响武器使用效率，暂时取发射速率一般值
+Dim weaponTime,WeaponNums
+weaponTime = 6000/2
+WeaponNums = 4
+//万能移动点击变量 tempString,tempColor
+dim tempString,tempColor,tempX,tempY
+// 加载X 变量 字符串类型，有几个要刷的行星带就要设定为几
+Dim jumpType
+//采矿类型
+DIM Mining
+Dim loadType
+Dim itemsBoxName1,itemsBoxName2
+Call lib.My_常用.获取屏幕高宽度
+// 全局坐标定位
+dm_ret = dm.FindStr(0,0,x,y,"右上","0.0.89-0.0.10",1.0,x11,y11)
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"选中的物体","200.4.79-200.14.19",1.0,x8,y8)
+dm_ret = dm.FindStr(0,0,x,y,"武器定位右","200.1.92-200.1.10",1.0,x14,y14)
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"总览","207.4.80-207.4.10",1.0,x5,y5)
+dm_ret = dm.FindStr(0 ,0 ,x ,y ,"我的货柜","207.4.80-207.4.10",1.0,x58,y58)
+If x11 > 0 and x8 > 0 and x14 > 0 and x5 > 0 and x40>0 Then
+else
+    //        MessageBox "有一个全局坐标定位没找到,必须使船在宇宙中才能获得所有坐标"
+    //        Goto End_1
+End If
+//
+//
+Rem tempStart
+                dm_ret = dm.FindStr(0  ,0 ,x ,y ,"坐标","120.50.75-120.50.5",1.0,x61,y61)
+If x61 > 0 Then
+    MoveTo x61,y61
+    SayString "_61"
+            Call 右键单击显示下拉菜单()
+        MoveTo x61+34,y61+11
+    Call 左键单击()
+    Call 跃迁补充()
+else
+    Call 回到空间站结束脚本()
+End If
+Rem Start_1
+dm_ret = dm.FindStr(x5,y5,x,y,"km","0.0.79-0.0.9|0.0.64-0.0.4",1.0,x59,y59)
+If x59 > 0 Then
+    dm_ret = dm.FindStr(x5  ,y5 ,x ,y59 ,"斜长岩|干焦岩","200.4.80-200.4.10",1.0,x60,y60)
+    If x60 > 0 Then
+        // 说明“斜长岩|干焦岩--坐标点”跳跃过来后有矿石在可采集范围内。直接可以采集
+        SayString "_51"
+        Call 锁定矿物()
+        Call 启动所有矿枪()
+else
+        SayString "_52"
+    Call 删除坐标_靠近矿_做新位标()
+            End If
+            dm_ret = dm.FindStr(x5  ,y5 ,x ,y ,"斜长岩|干焦岩","200.4.80-200.4.10",1.0,x60,y60)
+    If x60 <= 0 Then
+            //所有矿采集完毕，需要更换行星带。。。。
+                SayString "_54"
+        Call 删除坐标()
+        Call 回到空间站结束脚本()
+    End If
+    else
+            //可能只有“m"
+                dm_ret = dm.FindStr(x5  ,y5 ,x ,y ,"斜长岩|干焦岩","200.4.80-200.4.10",1.0,x60,y60)
+    If x60 > 0 Then
+            SayString "_53"
+                Call 锁定矿物()
+                Call 启动所有矿枪()
+        else
+                //所有矿采集完毕，需要更换行星带。。。。
+                        SayString "_55"
+        Call 删除坐标()
+        Call 回到空间站结束脚本()
+End If
+End If
+Call 无人机预警监视()
+Call 监视武器状态()
+Rem End_1
+EndScript
+EndScript
+
+    Sub 回到空间站结束脚本()
+Call 货柜满仓处理()
+    SayString "_脚本结束"
+    Goto End_1
+End Sub
+
+Sub 删除坐标()
+ //说明“斜长岩|干焦岩--坐标点”已经失效，删除位标。
+        tempString = "坐标"
+        tempColor = "120.50.75-120.50.5"
+        Call 万能_移动()
+        Call 右键单击显示下拉菜单()
+        tempString = "删除地点"
+        tempColor = "207.4.81-207.4.11"
+        Call 万能_移动并点击()
+End Sub
+Sub 删除坐标_靠近矿_做新位标()
+    Call 删除坐标()
+        //靠近并重新做一个新矿坐标。
+            Call 锁定矿物()
+    Call 靠近锁定矿()
+    // 加力燃烧器启动
+    Call 启动中槽1快捷()
+    Delay 1000
+  
+    Call 启动所有矿枪()
+    // 加力燃烧器close
+    Call 启动中槽1快捷()
+    Delay 1000
+        // 做新位标
+tempColor = "200.4.80-200.4.10"
+tempString = "斜长岩|干焦岩"
+    Call 万能_移动()
+    Call 右键单击显示下拉菜单()
+    tempString = "设为位标"
+    Call 万能_移动并点击()
+    Call 消除弹出窗口()
+    Call 停船()
+End Sub
+
+Sub 释放无人机()
+    tempColor ="200.4.80-200.4.10"
+    Call 万能_移动()
+    Call 右键单击显示下拉菜单()
+    MoveTo tempX+32,tempY+27
+    Call 左键单击()
+    Delay 2000
+End Sub
+
+Sub 无人机_战斗_采矿_收回状态处理()
+    dm_ret = dm.FindStr(0 ,0 ,x ,y ,"附近UAV", "200.4.80-200.4.10",1.0,x53,y53)
+    Rem temp收回无人机
+    dm_ret = dm.FindStr(x53 ,y53 ,x ,y ,tempState1, "200.4.80-200.4.10",1.0,x54,y54)
+    If x54 > 0 Then
+        Call 无人机返回快捷()
+        Delay 2000
+        Goto temp收回无人机
+    End If
+End Sub
+
+Sub 无人机预警监视()
+    dm_ret = dm.FindStr(x5 - 10 ,y5 ,x ,y ,"小|中|大","359.99.88-359.10.28",1.0,x51,y51)
+    If x51 > 0 Then
+        //有npc敌
+        dm_ret = dm.FindStr(0 ,0 ,x ,y ,"没有物品或","200.4.80-200.4.10",1.0,x52,y52)
+        If x52 > 0 Then
+            SayString "_21"
+            //没有释放无人机，释放战斗无人机
+            tempString ="战斗无人机"
+       
+            Call 释放无人机()
+        else
+            SayString "_22"
+            //释放中。如果是战斗机无需收回。是采矿机，需要收回在释放战斗机
+            tempState1="采矿无人机"
+            Call 无人机_战斗_采矿_收回状态处理()
+            dm_ret = dm.FindStr(0 ,0 ,x ,y ,"附近UAV", "200.4.80-200.4.10",1.0,x53,y53)
+            dm_ret = dm.FindStr(x53 ,y53 ,x ,y ,"战斗无人机", "200.4.80-200.4.10",1.0,x54,y54)
+            If x54 > 0 Then
+                Call 锁定npc()
+                Call 无人机攻击快捷()
+            End If
+        End If
+    else
+        //无npc敌
+        dm_ret = dm.FindStr(0 ,0 ,x ,y ,"没有物品或","200.4.80-200.4.10",1.0,x52,y52)
+        If x52 > 0 Then
+            SayString "_11"
+            //没有释放无人机，释放采矿无人机
+            tempString="采矿无人机"
+            Call 释放无人机()
+            //重复采集
+            tempString ="附近UAV"
+            Call 万能_移动()
+            Call 右键单击显示下拉菜单()
+            MoveTo tempX+23,tempY+57
+            Call 左键单击()
+        else
+            SayString "_12"
+            //释放中。如果是采矿机无需收回。是战斗机，需要收回在释放采矿机
+            tempState1="战斗无人机"
+            Call 无人机_战斗_采矿_收回状态处理()
+        End If
+    End If
+End Sub
+
+Sub 启动所有矿枪()
+    tempXX = 51
+    Rem 检查矿枪是否启动
+    MoveTo x14 + 48,y14 -44
+    Call 左键单击()
+    Delay 1000
+    MoveTo x14 ,y14
+    Delay 1000
+    MoveTo x14 + 48,y14 -44
+    Delay 1000
+    dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x56,y56)
+    If x56 > 0 Then
+        Delay 2000
+        Call 锁定矿物()
+        Goto 检查矿枪是否启动
+    End If
+
+Call 点击所有高槽位除去第一个以外()
+
+       //有可能是失去一个目标导致重新启动矿枪。。所以必须先收回“采矿无人机”。。。“战斗无人机”就不要管他了
+//                tempState1="采矿无人机"
+//    Call 无人机_战斗_采矿_收回状态处理()
+    Call 无人机返回快捷()
+End Sub
+
+    Sub 点击所有高槽位除去第一个以外()
+    i=WeaponNums -1
+    Rem checkWeapon
+    If i > 0 Then
+        MoveTo x14 + 48 + tempXX * i,y14 -44
+        Delay 50
+        LeftClick 1
+        Delay 50
+        i = i - 1
+        Goto checkWeapon
+    End If
+End Sub
+
+Sub 锁定矿物()
+    dm_ret = dm.FindStr(x5-20,y5,x,y,"锁定矿","0.0.100-0.0.10",1.0,x55,y55)
+    If x55 <= 0 Then
+        //最多索敌2个
+        dm_ret = dm.FindStr(x5 - 10 ,y5 ,x ,y ,"斜长岩|干焦岩","200.4.80-200.4.10",1.0,x6,y6)
+        MoveTo x5+40,y6
+        Call 索敌快捷键()
+        Delay 1000
+        dm_ret = dm.FindStr(x5 - 10 ,y6 + 19 ,x ,y ,"斜长岩|干焦岩","200.4.80-200.4.10",1.0,x6,y6)
+        If x6 > 0 Then
+            MoveTo x5+40,y6
+            Call 索敌快捷键()
+        End If
+        Delay 4000
+    End If
+End Sub
+
+ 
+
+Sub 监视武器状态()
+    tempNum=0
+    Rem temp监视
+    MoveTo x14,y14
+    Call 等待状态显示延时()
+    MoveTo x14 + 48,y14 -44
+    Call 等待状态显示延时()
+    dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x17,y17)
+    If x17 <= 0 Then
+        //保持对“总览”监视。。海盗，玩家，护盾装甲。。等等
+        tempNum=      tempNum+1
+        a = tempNum mod 5
+        If a = 0 Then
+            Call 加血()
+        End If
+        b = tempNum mod 4
+        If b = 0 Then
+            Call 无人机预警监视()
+        End If
+        c = tempNum mod 3
+        If c = 0 Then
+            Call 货柜仓位监视()
+//            Call 锁定矿物()
+        End If
+        Goto temp监视
+    else
+        //如果成为未使用状态，1.需要检查“我的货柜”是否满仓  2.锁定矿物被采集消耗完全，需要锁定对象重新采集
+        //3.所有矿全部采集完毕。需要跳转到下一个星带....
+                //4.npc海盗进行干扰。迫使所有锁定目标失效
+                                            //暂时跳转。。。。。。。。。。。。。。。。
+//        Call 锁定矿物()
+            Goto Start_1
+    End If
+End Sub
+
+Sub 货柜仓位监视()
+    dm_ret = dm.FindColor(x58 + 226 , y58 + 58 , x58 + 236,y58 + 62,"065e7b-000000|065f7b-000000|045c79-000000|055d7a-000000|075f7c-000000",1.0,0,x57,y57)
+    If x57 > 0 Then
+        tempState1="采矿无人机"
+        Call 无人机_战斗_采矿_收回状态处理()
+                tempState1="战斗无人机"
+                Call 无人机_战斗_采矿_收回状态处理()
+        SayString "_货柜已满"
+        Call 货柜满仓处理()
+    End If
+End Sub
+
+Sub 靠近锁定矿()
+    Rem 接近锁定矿物
+    dm_ret = dm.FindStr(x5-20,y5,x,y,"锁定矿","0.0.100-0.0.10",1.0,x55,y55)
+    If x55 > 0 Then
+        MoveTo x55,y55
+        Call 左键双击()
+    else
+        Delay 1000
+        Goto 接近锁定矿物
+    End If
+End Sub
+
+Sub Jump1()
+    loadType = "加载跳"
+    Call 加载X()
+    Delay 1000
+    Rem temp跳跃
+    FindColorEx x5,y5,x,y,"FFFF",0,0.9,x31,y31
+    If x31 > 0 Then
+        MoveTo x31+50,y31
+        Call 右键单击()
+        Delay 500
+        dm_ret = dm.FindStr(x5 ,y5 ,x ,y ,"跃迁至","207.4.79-207.4.10",1.0,x33,y33)
+        If x33 > 0 Then
+            MoveTo x33,y33
+            Call 左键单击()
+            Delay 30000
+        End If
+        dm_ret = dm.FindStr(x5 ,y5 ,x ,y ,"跳跃","207.4.79-207.4.10",1.0,x36,y36)
+        If x36>0 Then
+            MoveTo x36,y36
+            Call 左键单击()
+            Delay 2000
+        End If
+    else
+        dm_ret = dm.FindStr(0 ,0 ,x ,y ,"当前目的地","207.4.79-207.4.10",1.0,x39,y39)
+        If x39 > 0 Then
+            Goto temp跳跃
+        End If
+        Goto temp跳跃End
+    End If
+    Goto temp跳跃
+    Rem temp跳跃End
+    Delay 6000
+End Sub
+
+Sub 货柜满仓处理()
+    Call 消除弹出窗口()
+    Rem temp货柜满仓处理1
+    //停靠空间站
+    MoveTo x11 + 51,y11 + 40
+    Call 左键单击()
+    Delay 500
+    //1.回到所处星域的第一个空间站清仓
+    dm_ret = dm.FindStr(x11 + 51,y11 + 40 , x ,y,"空间站","210.1.75-210.4.10",1.0,x23,y23)
+    If x23 > 0 Then
+        MoveTo x23,y23
+        Delay 500
+        MoveTo x23+70,y23
+        Delay 500
+        dm_ret = dm.FindStr(x11 + 51,y11 + 40 , x ,y,"停靠","210.1.75-210.4.10",1.0,x23,y23)
+        MoveTo x23,y23
+        Call 左键单击()
+    End If
+    //关闭星图
+    //    KeyPress "F10", 1
+    Rem temp货柜满仓处理
+    dm_ret = dm.FindStr(0 ,0 ,x ,y ,"空间站物品","207.4.79-207.4.9",1.0,x38,y38)
+    If x38 <= 0 Then
+        Delay 2000
+        Goto temp货柜满仓处理
+    End If
+    Delay 5000
+    //进站完毕。清仓到空间站
+    itemsBoxName1 ="我的货柜"
+    itemsBoxName2 = "空间站物品"
+    Call 装载物品()
+    //有维修站就维修
+    MoveTo 630,420
+    Call 右键单击()
+    Delay 500
+    dm_ret = dm.FindStr(0,0,x,y,"获取维修报","207.4.79-207.4.9",1.0,x6,y6)
+    If x6 > 0 Then
+        MoveTo x6  , y6
+        Call 左键单击()
+        Delay 1000
+        dm_ret = dm.FindStr(0,0,x,y,"修理全部","207.4.79-207.4.9",1.0,x6,y6)
+        If x6> 0 Then
+            MoveTo x6  , y6
+            Call 左键单击()
+            Delay 1000
+            Call 消除弹出窗口()
+        End If
+    End If
+    Call 离站()
+    //    Call 打开星图()
+    Call 出站_必须设置()
+        //   这里缺少一个跳转。。。。。。。。。。
+    Goto tempStart
+End Sub
+Sub 加载X()
+    MoveTo x5+5,y5+5
+    Call 左键单击()
+    Delay 1000
+    dm_ret = dm.FindStr(x5 ,y5 ,x ,y ,loadType,"207.4.79-207.4.10",1.0,x37,y37)
+    MoveTo x37,y37
+    Call 左键单击()
+    Delay 1000
+End Sub
+
+Sub 加血()
+    FindColorEx x14+7,y14-44,x14+15,y14-36,"1818DC",0,0.9,x27,y27
+    If x27 > 0 Then
+        //打开 加血护盾
+        MoveTo x14 + 130, y14
+        Delay 500
+        dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x17,y17)
+        If x17 > 0 Then
+            Call 左键单击()
+        End If
+    else
+        //关闭 加血护盾
+        MoveTo x14 + 130, y14
+        Delay 500
+        dm_ret = dm.FindStr(x14 ,y14 -148 ,x ,y ,"状态未使用","0.0.100-0.0.10",1.0,x17,y17)
+        If x17 <= 0 Then
+            Call 左键单击()
+        End If
+    End If
+
+End Sub
+
+Sub 出站_必须设置()
+    //确保无人机-状态提示平台展开
+    tempString ="附近UAV"
+    tempColor ="200.4.80-200.4.10"
+    Call 万能_移动并点击()
+    tempString ="挂舱UAV"
+    Call 万能_移动并点击()
+End Sub
+
+Sub 锁定npc()
+    //最多索敌2个
+    dm_ret = dm.FindStr(x5 - 10 ,y5 ,x ,y ,"小|中|大","359.99.88-359.10.28",1.0,x6,y6)
+    MoveTo x6+30,y6
+    Call 索敌快捷键()
+    dm_ret = dm.FindStr(x5 - 10 ,y6 + 19 ,x ,y ,"小|中|大","359.99.88-359.10.28",1.0,x6,y6)
+    If x6 > 0 Then
+        MoveTo x6+30,y6
+        Call 索敌快捷键()
+    End If
+    Delay 1000
+End Sub
+
+
+Sub 索敌快捷键()
+    Delay 100
+    KeyDown 17, 1
+    Delay 100
+    LeftClick 1
+    Delay 100
+    KeyUp 17, 1
+    Delay 100
+End Sub
+
+Sub 显示小行星带()
+    MoveTo x11 + 51,y11 + 40
+    Call 左键单击()
+    MoveTo x11 + 81,y11 + 48
+    Delay 300
+End Sub
+   
+Sub 接近最近敌()
+    dm_ret = dm.FindStr(x5 - 10 ,y5 ,x ,y ,"小|中|大","0.90.75-0.90.15",1.0,x6,y6)
+    MoveTo x6+30,y6
+    Call 左键单击()
+    Call 左键双击()
+End Sub
+Sub 环绕敌()
+    MoveTo x8 + 81,y8 +81
+    LeftClick 1
+End Sub
+Sub 启动中槽1快捷()
+    Delay 100
+    KeyDown 18, 1
+    Delay 100
+    KeyPress 112, 1
+    Delay 100
+    KeyUp 18, 1
+    Delay 100
+End Sub
+Sub 启动中槽2快捷()
+    Delay 100
+    KeyDown 18, 1
+    Delay 100
+    KeyPress 113, 1
+    Delay 100
+    KeyUp 18, 1
+    Delay 100
+End Sub
+Sub 打开星图()
+    KeyPress "F10", 1
+    Rem temp星图打开
+    dm_ret = dm.FindStr(0 ,0 ,x ,y ,"星图","200.4.80-200.4.10",1.0,x45,y45)
+    If x45 > 0 Then
+        MoveTo 417, 645
+        Delay 300
+        LeftDown 1
+        Delay 300
+        MoveTo 409, 450
+        Delay 300
+        LeftUp 1
+    else
+        Delay 3000
+        Goto temp星图打开
+    End If
+End Sub
+
+Sub 无人机攻击快捷()
+    Delay 100
+    KeyDown 17, 1
+    Delay 100
+    KeyPress 50, 1
+    Delay 100
+    KeyUp 17, 1
+        Delay 2000
+End Sub
+Sub 无人机返回快捷()
+    Delay 100
+    KeyDown 17, 1
+    Delay 100
+    KeyPress 51, 1
+    Delay 100
+    KeyUp 17, 1
+    Delay 100
+    dm_ret = dm.FindStr(x5 - 10 ,y5 ,x ,y ,"箱","0.0.85-0.0.10",1.0,x21,y21)
+    If x21 <= 0 Then
+        Rem temp无人机返回
+        dm_ret = dm.FindStr(0,0,x,y,"无人返回中","60.100.100-60.100.10",1.0,x20,y20)
+        If x20> 0 Then
+            Delay 1000
+            Goto temp无人机返回
+        End If
+    End If
+End Sub
+
+ 
+
+
+Sub 装载物品()
+    dm_ret = dm.FindStr(0,0,x,y,itemsBoxName1,"207.4.80-207.4.10",1.0,x7,y7)
+    If x7 > 0 Then
+        MoveTo x7 + 55, y7 + 85
+        Call 左键单击()
+        Call 全选()
+        Delay 500
+        LeftDown 1
+        Delay 500
+        dm_ret = dm.FindStr(0 , 0 ,x ,y,itemsBoxName2,"207.4.80-207.4.10",1.0,x6,y6)
+        MoveTo x6 +50 , y6 + 100
+        Delay 500
+        LeftUp 1
+        Delay 2500
+    End If
+End Sub
+Sub 离站()
+    Delay 1000
+    KeyDown 18, 1
+    Delay 100
+    KeyDown 16, 1
+    Delay 100
+    KeyPress 88, 1
+    Delay 100
+    KeyUp 16, 1
+    Delay 100
+    KeyUp 18, 1
+    Delay 10000
+    Rem temp离站
+    dm_ret = dm.FindStr(0 ,0 ,x ,y ,"总览","207.4.80-207.4.10",1.0,x5,y5)
+    If x5 <= 0 Then
+        Delay 5000
+        Goto temp离站
+    else
+        Delay 5000
+    End If
+End Sub
+Sub 全选()
+    KeyDown 17, 1
+    Delay 100
+    KeyPress 65, 1
+    Delay 100
+    KeyUp 17, 1
+End Sub
+
+Sub 跃迁()
+    Delay 500
+    dm_ret = dm.FindStr(0,0,x,y,"跃迁至","204.5.80-204.5.10",1.0,x3,y3)
+    MoveTo x3,y3
+    Call 左键单击()
+    Delay 15000
+    Rem 是否到达目的地
+    dm_ret = dm.FindStr(x11 + 590, y11 + 630,x,y,"目的地","204.5.80-204.5.10",1.0,x4,y4)
+    If x4 > 0 Then
+        Delay 2000
+        Goto 是否到达目的地
+    End If
+    Call 跃迁补充()
+End Sub
+Sub 跃迁补充()
+    Rem temp跃迁补充
+    MoveTo x11 + 51,y11 + 40
+    Call 左键单击()
+    Delay 500
+    dm_ret = dm.FindStr(x11 + 51,y11 + 40 , x ,y,"行星","210.1.75-210.4.10",1.0,x23,y23)
+    MoveTo x23,y23
+    Delay 500
+    MoveTo x23+70,y23
+    Delay 800
+    dm_ret = dm.FindStr(0,0,x,y,"跃迁至","204.5.80-204.5.10",1.0,x24,y24)
+    If x24 <= 0 Then
+        Delay 1000
+        Goto temp跃迁补充
+    End If
+End Sub
+Sub 移动视角()
+    //后期加入随机值
+    MoveTo 100, 100
+    LeftUp 1
+    MoveTo 120,120
+    LeftDown 1
+End Sub
+Sub 万能_移动()
+    //变量   tempString,tempColor ，全屏扫描范围
+    dm_ret = dm.FindStr(0,0,x,y,tempString,tempColor,1.0,tempX,tempY)
+    If tempX > 0 Then
+        MoveTo tempX,tempY
+    End If
+End Sub
+Sub 万能_移动并点击()
+    //变量   tempString,tempColor ，全屏扫描范围
+    dm_ret = dm.FindStr(0,0,x,y,tempString,tempColor,1.0,tempX,tempY)
+    If tempX > 0 Then
+        MoveTo tempX,tempY
+        Call 左键单击()
+    End If
+End Sub
+Sub 左键单击()
+    Delay 100
+    LeftClick 1
+    Delay 300
+End Sub
+Sub 左键双击()
+    Delay 100
+    LeftDoubleClick 1
+    Delay 300
+End Sub
+Sub 右键单击()
+    Delay 100
+    RightClick 1
+    Delay 300
+End Sub
+Sub 消除弹出窗口()
+    Delay 1000
+    KeyPress "Enter", 1
+    Delay 1000
+    KeyPress "Enter", 1
+End Sub
+Sub 等待状态显示延时()
+    Delay 600
+End Sub
+Sub 右键单击显示下拉菜单()
+    Delay 100
+    RightClick 1
+    Delay 500
+End Sub
+Sub 停船()
+    Delay 5000
+    KeyDown 17, 1
+    Delay 100
+    KeyPress 52, 1
+    Delay 100
+    KeyUp 17, 1
+    Delay 100
+End Sub
