@@ -16,7 +16,8 @@
 ;; 设定屏幕宽和高
 (define screen-w 1024)
 (define screen-h 768)
-(define mouse-delay 1)
+(define MOUSEDELAY 1)
+(define KEYDELAY 0.1)
 
 (define ocr-found-x (box 0))
 (define ocr-found-y (box 0))
@@ -27,11 +28,11 @@
 (define-syntax-rule (mouse-dest-y)
   (unbox ocr-found-y))
 
-
 (define pos-total-list (make-posn 0 0))
 (define pos-selected-object (make-posn 0 0))
 (define pos-menu (make-posn 50 40))
-
+(define pos-weapon-left (make-posn 450 675))
+(define pos-weapon-right (make-posn 560 675))
 
 (define-syntax-rule (mouse-move-to x y)
   (= 1 (dm "MoveTo" x y)))
@@ -78,14 +79,21 @@
 ;; 发送快捷键的组合
 (define (key-combine-3 key1 key2 key3)
   (dm "KeyDownChar" key1)
-    (dm "KeyDownChar" key2)
-     (dm "KeyPressChar" key3)
-     (dm "KeyUpChar" key2)
-    (dm "KeyUpChar" key1))
+  (sleep KEYDELAY)
+  (dm "KeyDownChar" key2)
+  (sleep KEYDELAY)
+  (dm "KeyPressChar" key3)
+  (sleep KEYDELAY)
+  (dm "KeyUpChar" key2)
+  (sleep KEYDELAY)
+  (dm "KeyUpChar" key1))
+
 (define (key-combine-2 key1 key2)
   (dm "KeyDownChar" key1)
-     (dm "KeyPressChar" key2)
-    (dm "KeyUpChar" key1))
+  (sleep KEYDELAY)
+  (dm "KeyPressChar" key2)
+  (sleep KEYDELAY)
+  (dm "KeyUpChar" key1))
 
 (define (find-string content)
     (if (zero? (dm "FindStrFast"
@@ -102,8 +110,9 @@
     (if mouse-pos
         (mouse-move-to (+ 3 (posn-x mouse-pos)) (+ 3 (posn-y mouse-pos)))
         #f)))
-;; 离开空间站函数
+
 (define (exit-space-station)
+   ;; 离开空间站函数
   (key-combine-3 "ctrl" "alt" "e");; 先发送离站命令
   (sleep 5);; 等待5秒
   ;; 除非发现总览，否则代表出站失败，继续出站
@@ -112,24 +121,36 @@
    #t
    (exit-space-station)
    ))
-;; 初始化
+
 (define (do-init)
   (define hwnd-eve (dm "FindWindow" "triuiScreen" "EVE - IGameless"))
   (dm "BindWindow" hwnd-eve "dx2" "windows" "dx" 0)
   (set! pos-total-list (find-string "总览"))
   (set! pos-selected-object (find-string "选中的物体"))
+  (when (zero? (dm "FindStrFast"
+      420 640 602 700
+      "<<"
+      "0.0.91-0.0.40"
+      1.0
+      ocr-found-x ocr-found-y))
+  (set! pos-weapon-right (make-posn (mouse-dest-x) (mouse-dest-y))))
+  (when (zero? (dm "FindStrFast"
+      420 640 602 700
+      ">>"
+      "0.0.91-0.0.40"
+      1.0
+      ocr-found-x ocr-found-y))
+  (set! pos-weapon-left (make-posn (mouse-dest-x) (mouse-dest-y))))
   (if (and pos-selected-object pos-total-list)
       #t
-      #f)
-  )
+      #f))
 
-;; 退出时运行
 (define (do-quit)
   (dm "UnBindWindow"))
 
 (define (menu-select-item content)
   (mouse-move-to (posn-x pos-menu) (posn-y pos-menu))
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (mouse-left-click)
   (sleep 3)
   (if(zero? (dm "FindStrFast"
@@ -140,8 +161,6 @@
              ocr-found-x ocr-found-y))
      (mouse-move-to (+ (mouse-dest-x) 7) (+ (mouse-dest-y) 5))
      (menu-select-item content)))
-
-
 
 (define (menu-deep-in)
   ;; 进入下一级菜单
@@ -163,13 +182,13 @@
   (key-combine-3 "ctrl" "alt" "s") ;; 先停止舰船
   (sleep 1)
   (menu-select-item "空间站")
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (menu-deep-in)
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (menu-move-index (- n 1))
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (menu-deep-in)
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (zero? (dm "FindStrFast"
              (mouse-dest-x) (mouse-dest-y) (+ (mouse-dest-x) 175) (+ (mouse-dest-y) 175)
              "停靠"
@@ -177,7 +196,7 @@
              1.0
              ocr-found-x ocr-found-y))
   (mouse-move-to (+ (mouse-dest-x) 3) ( + (mouse-dest-y) 3))
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (mouse-left-click)
   (sleep 5)
   (define (wait-for-enter-station)
@@ -185,21 +204,20 @@
     (if (not (find-string "空间站服务"))
         (wait-for-enter-station)
         #t))
-  (wait-for-enter-station)
-  )
+  (wait-for-enter-station))
 
 (define (goto-asteroid-belt n)
   ;; 到第n个小行星带
   (key-combine-3 "ctrl" "alt" "s") ;; 先停止舰船
   (sleep 1)
   (menu-select-item "小行星带")
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (menu-deep-in)
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (menu-move-index (- n 1))
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (menu-deep-in)
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (mouse-left-click)
   (sleep 5) ;; 等待越前引擎启动
   (define (wait-for-jumping)
@@ -207,8 +225,7 @@
     (if (in-jumping?)
         (wait-for-jumping)
         #t))
-  (wait-for-jumping)
-  )
+  (wait-for-jumping))
 
 (define (mineral-select-index n)
   ;; 锁定第n个矿物
@@ -216,10 +233,10 @@
   (define base-x (+ (posn-x pos-total-list) 80))
   (define base-y (- (+ (posn-y pos-total-list) 66) move-step))
   (mouse-move-to base-x (+ base-y (* n move-step)))
-  (sleep mouse-delay)
+  (sleep MOUSEDELAY)
   (mouse-left-click)
-  (key-combine-3 "ctrl" "alt" "l")
-  )
+  (sleep 1)
+  (key-combine-3 "ctrl" "alt" "l"))
 
 (define (store-unload)
   ;; 卸载货物
@@ -227,24 +244,28 @@
   (cond [(zero? (dm "FindStrFast"
                  30 40 328 612
                  "物品机库"
-                 "0.0.59-0.0.0"
+                 "0.0.59-0.0.25"
                  1.0
                  ocr-found-x ocr-found-y))
          (mouse-move-to 500 200)
          (mouse-left-click)
-         (sleep mouse-delay)
-         (key-combine-2 "ctrl" "a")
+         (sleep MOUSEDELAY)
+         (mouse-right-click)
+         (sleep MOUSEDELAY)
+         (mouse-move 10 5)
+         (sleep MOUSEDELAY)
+         (mouse-left-click)
          (let ([store-dest-x (+ 10 (mouse-dest-x))]
                [store-dest-y (+ 5 (mouse-dest-y))])
            (if (find-string "货物名字")
                 (mouse-move-to (+ 20 (mouse-dest-x))
                                (+ 20 (mouse-dest-y)))
                 (mouse-move-to 475 90))
-           (sleep mouse-delay)
+           (sleep MOUSEDELAY)
            (mouse-left-down)
-           (sleep mouse-delay)
+           (sleep MOUSEDELAY)
            (mouse-move-to store-dest-x store-dest-y)
-           (sleep mouse-delay)
+           (sleep MOUSEDELAY)
            (mouse-left-up))]
         [else (key-combine-2 "alt" "c");; 不存在则打开货柜
               (sleep 2) ;; 等待0.5秒，等待后继续判断货柜位置
@@ -258,3 +279,75 @@
              "0.0.0-0.0.0"
              1.0
              (box 0) (box 0))))
+
+(define (weapon-in-use?)
+  (zero? (dm "FindStr" 662 648 664 650
+             "白色点"
+             "c5c5c5-333333"
+             1.0
+             (box 0) (box 0)
+             )))
+
+(define (wait-for-weapon n)
+  (define (wait-for-weapon-ex j k)
+    (cond [(<= j 0) #t]
+          [else
+           (sleep 1)
+           (if (weapon-in-use?)
+               (wait-for-weapon-ex k k)
+             (wait-for-weapon-ex (- j 1) k))]))
+  (wait-for-weapon-ex n n))
+
+(define (do-when-store-is-full)
+  ;; 货柜满的处理
+  (goto-space-station 1)
+  (sleep 3)
+  (store-unload))
+
+(define (in-cannon-shot?)
+  ;; 是否进入射程
+ (and (string=? "" (dm "FindStrFastEx"
+      (+ 30 (posn-x pos-selected-object)) (+ 20 (posn-y pos-selected-object)) 
+      (+ 124 (posn-x pos-selected-object)) (+ 51 (posn-y pos-selected-object))
+      "km"
+      "0.0.67-0.0.50"
+      1.0))
+      (string=? "" (dm "FindPicEx"
+                       (+ 30 (posn-x pos-selected-object)) (+ 20 (posn-y pos-selected-object)) 
+                       (+ 124 (posn-x pos-selected-object)) (+ 51 (posn-y pos-selected-object))
+                       "pic/dot.bmp"
+                       "000000"
+                       1.0 0))))
+
+(define (wait-for-approach n)
+  ;; 接近目标等待，进入射程后返回
+  (define (wait-for-approach-ex j k)
+    (cond [(<= j 0) #t]
+          [else
+           (sleep 0.3)
+           (if (not (in-cannon-shot?))
+               (wait-for-approach-ex k k)
+             (wait-for-approach-ex (- j 1) k))]))
+  (wait-for-approach-ex n n))
+
+(define (locked?)
+  ;;判断是否锁定目标
+  (not (string=? "" (dm "FindStrFastEx"
+      (- (posn-x pos-total-list) 30) (+ 20 (posn-y pos-total-list)) screen-w screen-h
+      "锁定矿"
+      "200.1.92-200.1.10"
+      1.0))))
+
+(define (store-is-full?)
+  (cond [(zero? (dm "FindStrFast"
+                 0 0 1024 768
+                 "过滤器"
+                 "0.0.37-0.0.0"
+                 1.0
+                 ocr-found-x ocr-found-y))
+      (not (string=? "" (dm "FindStrFastEx"
+          (- (mouse-dest-x) 20) (+ (mouse-dest-y) 2) (mouse-dest-x) (+ (mouse-dest-y) 10)
+          "仓库满"
+          "194.100.40-0.0.0"
+          1.0)))]
+      [else (key-combine-2 "alt" "c") (sleep 2) (store-is-full?)]))
