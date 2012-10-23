@@ -351,3 +351,65 @@
           "194.100.40-0.0.0"
           1.0)))]
       [else (key-combine-2 "alt" "c") (sleep 2) (store-is-full?)]))
+
+(define (create-main-window)
+  ;; 构造窗体
+  (define frame (new frame% [label "取个什么名字呢"]
+                     [width 400]))
+  (define pane1 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane2 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane3 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane4 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane5 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane6 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane7 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane8 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane9 (new horizontal-pane% [parent frame]
+                    [min-width 400]))
+  (define pane10 (new horizontal-pane% [parent frame]
+                    [min-width 400]
+                    [alignment '(center top)]))
+                    
+  (define label-char-name (new text-field%
+                               [label "角色名:"]
+                               [init-value "请输入用户名"]
+                               [parent pane1]))
+  (define button-do-bind (new button%
+                              [label "查找并绑定窗口"]
+                              [parent pane1]
+                              [callback (lambda (button-do-bind event)
+                                          (send button-do-bind enable #f);;绑定比较耗时，先将按钮锁定，防止重复绑定
+                                          (cond [(zero? hwnd) ((lambda ()
+                                                                (cond
+                                                                 [(find-and-bind-char (send label-char-name get-value))
+                                                                  (send label-char-name enable #f)
+                                                                  (send button-do-bind set-label "解除窗口绑定")]
+                                                                 [else (send label-char-name set-value "绑定失败，请检查角色名是否正确")])))]
+                                                [else (unbind-char)
+                                                      (send label-char-name enable #t)
+                                                      (send button-do-bind set-label "查找并绑定窗口")])
+                                          (send button-do-bind enable #t))]))
+  
+    (define button-start-stop (new button% [label "开始"]
+                                 [parent pane10]))
+  
+  (send frame show #t)
+  frame)
+
+(define (find-and-bind-char char-name)
+  (set! hwnd (dm "FindWindow" "triuiScreen" (string-append "EVE - " char-name)))
+  (if (zero? hwnd)
+      #f
+      (= 1 (dm "BindWindow" hwnd "dx2" "windows" "dx" 0))))
+
+(define (unbind-char)
+  (dm "UnBindWindow")
+  (set! hwnd 0))
