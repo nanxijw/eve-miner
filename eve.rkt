@@ -2,20 +2,27 @@
 (require ffi/unsafe)
 (require ffi/com)
 (require ffi/com-registry)
+
 (define dm-obj (com-create-instance (coclass->clsid "dm.dmsoft")))
+(define hwnd 0)
+(define t 0)
 
 (define-syntax-rule (dm function-name ...)
   (com-invoke dm-obj function-name ...))
 
-(dm "SetPath" "D:/Work/eve")
-(dm "SetDict" 0 "采矿.txt")
-(dm "SetMouseDelay" "dx" 800)
+(define (do-when-load)
+  (dm "SetPath" "D:\\Work\\eve")
+  (dm "SetDict" 0 "采矿.txt")
+  (void))
+(do-when-load)
 
 (define-struct posn (x y))
 
 ;; 设定屏幕宽和高
 (define screen-w 1024)
 (define screen-h 768)
+
+;; 设置键鼠延迟
 (define MOUSEDELAY 1)
 (define KEYDELAY 0.1)
 
@@ -33,6 +40,12 @@
 (define pos-menu (make-posn 50 40))
 (define pos-weapon-left (make-posn 450 675))
 (define pos-weapon-right (make-posn 560 675))
+
+(define pos-weapon-check (make-posn 663 648))
+(define conf-asteroid-belt 1)
+(define conf-space-station 1)
+(define conf-miniplanet    1)
+(define conf-max-asteroid-belt 4)
 
 (define-syntax-rule (mouse-move-to x y)
   (= 1 (dm "MoveTo" x y)))
@@ -76,8 +89,9 @@
 
 (define-syntax-rule (mouse-move-down y)
     (mouse-move 0 y))
-;; 发送快捷键的组合
+
 (define (key-combine-3 key1 key2 key3)
+  ;; 发送快捷键的组合
   (dm "KeyDownChar" key1)
   (sleep KEYDELAY)
   (dm "KeyDownChar" key2)
@@ -115,38 +129,35 @@
    ;; 离开空间站函数
   (key-combine-3 "ctrl" "alt" "e");; 先发送离站命令
   (sleep 5);; 等待5秒
-  ;; 除非发现总览，否则代表出站失败，继续出站
+  ;; 除非发现总览,否则代表出站失败,继续出站
   (if
    (or (find-string "选中的物体") (find-string "总览"))
    #t
-   (exit-space-station)
-   ))
+   (exit-space-station)))
 
 (define (do-init)
-  (define hwnd-eve (dm "FindWindow" "triuiScreen" "EVE - IGameless"))
-  (dm "BindWindow" hwnd-eve "dx2" "windows" "dx" 0)
-  (set! pos-total-list (find-string "总览"))
-  (set! pos-selected-object (find-string "选中的物体"))
-  (when (zero? (dm "FindStrFast"
-      420 640 602 700
-      "<<"
-      "0.0.91-0.0.40"
-      1.0
-      ocr-found-x ocr-found-y))
-  (set! pos-weapon-right (make-posn (mouse-dest-x) (mouse-dest-y))))
-  (when (zero? (dm "FindStrFast"
-      420 640 602 700
-      ">>"
-      "0.0.91-0.0.40"
-      1.0
-      ocr-found-x ocr-found-y))
-  (set! pos-weapon-left (make-posn (mouse-dest-x) (mouse-dest-y))))
-  (if (and pos-selected-object pos-total-list)
-      #t
-      #f))
-
-(define (do-quit)
-  (dm "UnBindWindow"))
+  (cond [(zero? hwnd) #f]
+        [else
+         (dm "LockInput" 1)
+         (set! pos-total-list (find-string "总览"))
+         (set! pos-selected-object (find-string "选中的物体"))
+         (when (zero? (dm "FindStrFast"
+                          420 640 602 700
+                          "<<"
+                          "0.0.91-0.0.40"
+                          1.0
+                          ocr-found-x ocr-found-y))
+           (set! pos-weapon-right (make-posn (mouse-dest-x) (mouse-dest-y))))
+         (when (zero? (dm "FindStrFast"
+                          420 640 602 700
+                          ">>"
+                          "0.0.91-0.0.40"
+                          1.0
+                          ocr-found-x ocr-found-y))
+           (set! pos-weapon-left (make-posn (mouse-dest-x) (mouse-dest-y))))
+         (if (and pos-selected-object pos-total-list)
+             #t
+             #f)]))
 
 (define (menu-select-item content)
   (mouse-move-to (posn-x pos-menu) (posn-y pos-menu))
@@ -166,7 +177,7 @@
   ;; 进入下一级菜单
   (set! mouse-pos (mouse-get-pos))
   (if (zero? (dm "FindPic"
-                 (posn-x mouse-pos) (- (posn-y mouse-pos) 10) 1024 (+ (posn-y mouse-pos) 15)
+                 (posn-x mouse-pos) (- (posn-y mouse-pos) 10) screen-w (+ (posn-y mouse-pos) 15)
                  "pic/right.bmp"
                  "000000"
                  1.0 0
@@ -281,12 +292,10 @@
              (box 0) (box 0))))
 
 (define (weapon-in-use?)
-  (zero? (dm "FindStr" 662 648 664 650
-             "白色点"
-             "c5c5c5-333333"
-             1.0
-             (box 0) (box 0)
-             )))
+  (= 1 (dm "FindColor"
+             (posn-x pos-weapon-check) (posn-y pos-weapon-check)
+             (+ 1 (posn-x pos-weapon-check)) (+ 1 (posn-y pos-weapon-check))
+             "c5c5c5-333333" 1.0 0 (box 0) (box 0))))
 
 (define (wait-for-weapon n)
   (define (wait-for-weapon-ex j k)
@@ -300,24 +309,28 @@
 
 (define (do-when-store-is-full)
   ;; 货柜满的处理
-  (goto-space-station 1)
+  (goto-space-station conf-space-station)
   (sleep 3)
   (store-unload))
 
 (define (in-cannon-shot?)
   ;; 是否进入射程
- (and (string=? "" (dm "FindStrFastEx"
-      (+ 30 (posn-x pos-selected-object)) (+ 20 (posn-y pos-selected-object)) 
+  ;; 若找不到“km”字样，则进入10km射程
+ (not (zero? (dm "FindStrFast"
+      (+ 30 (posn-x pos-selected-object)) (+ 20 (posn-y pos-selected-object))
       (+ 124 (posn-x pos-selected-object)) (+ 51 (posn-y pos-selected-object))
       "km"
       "0.0.67-0.0.50"
-      1.0))
-      (string=? "" (dm "FindPicEx"
-                       (+ 30 (posn-x pos-selected-object)) (+ 20 (posn-y pos-selected-object)) 
-                       (+ 124 (posn-x pos-selected-object)) (+ 51 (posn-y pos-selected-object))
-                       "pic/dot.bmp"
-                       "000000"
-                       1.0 0))))
+      1.0
+      (box 0) (box 0))))
+      ;; 屏蔽的这段为判断是否小于1000米的代码
+      ;; (string=? "" (dm "FindPicEx"
+      ;;                  (+ 30 (posn-x pos-selected-object)) (+ 20 (posn-y pos-selected-object))
+      ;;                  (+ 124 (posn-x pos-selected-object)) (+ 51 (posn-y pos-selected-object))
+      ;;                  "pic/dot.bmp"
+      ;;                  "000000"
+      ;;                  1.0 0))
+ )
 
 (define (wait-for-approach n)
   ;; 接近目标等待，进入射程后返回
@@ -340,7 +353,7 @@
 
 (define (store-is-full?)
   (cond [(zero? (dm "FindStrFast"
-                 0 0 1024 768
+                 0 0 screen-w screen-h
                  "过滤器"
                  "0.0.37-0.0.0"
                  1.0
@@ -375,9 +388,8 @@
   (define pane9 (new horizontal-pane% [parent frame]
                     [min-width 400]))
   (define pane10 (new horizontal-pane% [parent frame]
-                    [min-width 400]
-                    [alignment '(center top)]))
-                    
+                    [min-width 400]))
+
   (define label-char-name (new text-field%
                                [label "角色名:"]
                                [init-value "请输入用户名"]
@@ -392,24 +404,148 @@
                                                                  [(find-and-bind-char (send label-char-name get-value))
                                                                   (send label-char-name enable #f)
                                                                   (send button-do-bind set-label "解除窗口绑定")]
-                                                                 [else (send label-char-name set-value "绑定失败，请检查角色名是否正确")])))]
+                                                                 [else (send label-char-name set-value "绑定失败，请检查角色名是否正确")
+                                                                       (sleep 0.5)
+                                                                       (send label-char-name set-value "请输入用户名")])))]
                                                 [else (unbind-char)
                                                       (send label-char-name enable #t)
                                                       (send button-do-bind set-label "查找并绑定窗口")])
                                           (send button-do-bind enable #t))]))
-  
-    (define button-start-stop (new button% [label "开始"]
-                                 [parent pane10]))
-  
-  (send frame show #t)
+
+  (define text-field-station-conf (new text-field%
+                                       [label "默认空间站："]
+                                       [init-value (number->string conf-space-station)]
+                                       [parent pane2]))
+  (define text-field-max-asteroid-conf (new text-field%
+                                       [label "小行星带数目："]
+                                       [init-value (number->string conf-max-asteroid-belt)]
+                                       [parent pane2]))
+  (define text-field-asteroid-conf (new text-field%
+                                       [label "默认小行星带："]
+                                       [init-value (number->string conf-asteroid-belt)]
+                                       [parent pane2]))
+
+  (define text-field-weapon-check-x (new text-field%
+                                        [label "武器监视坐标-X："]
+                                        [init-value (number->string (posn-x pos-weapon-check))]
+                                        [parent pane3]))
+  (define text-field-weapon-check-y (new text-field%
+                                        [label "武器监视坐标-Y："]
+                                        [init-value (number->string (posn-y pos-weapon-check))]
+                                        [parent pane3]))
+  (define button-test-weapon (new button%
+                                  [label "测试武器状态"]
+                                  [parent pane3]
+                                  [callback (lambda (button-test-weapon event)
+                                              (set! pos-weapon-check
+                                                    (make-posn (string->number (send text-field-weapon-check-x get-value))
+                                                               (string->number (send text-field-weapon-check-y get-value))))
+                                              (cond [(weapon-in-use?)
+                                                     (send button-test-weapon set-label "武器使用中")
+                                                     (sleep 0.5)
+                                                     (send button-test-weapon set-label "测试武器状态")]
+                                                    [else (send button-test-weapon set-label "武器空闲")
+                                                          (sleep 0.5)
+                                                          (send button-test-weapon set-label "测试武器状态")]))]))
+
+  (define button-start-stop (new button%
+                                 [label "开始"]
+                                 [parent pane10]
+                                 [callback (lambda (button-start-stop event)
+                                             (cond
+                                              [(string=? (send button-start-stop get-label) "开始") (do-when-button-start-clicked)]
+                                              [else (do-when-button-stop-clicked)]))]))
+  (define message-show-status (new message%
+                                   [label "绑定窗口前，请确保窗口有一部分在屏幕外部"]
+                                   [parent pane10]))
+
+  (define (do-when-button-start-clicked)
+    (cond
+     [(do-init)
+      (set! conf-asteroid-belt (string->number (send text-field-asteroid-conf get-value)))
+      (set! conf-max-asteroid-belt (string->number (send text-field-max-asteroid-conf get-value)))
+      (set! conf-space-station (string->number (send text-field-station-conf get-value)))
+      (set! pos-weapon-check
+            (make-posn (string->number (send text-field-weapon-check-x get-value))
+                       (string->number (send text-field-weapon-check-y get-value))))
+      (mouse-move-to 350 230)
+      (sleep MOUSEDELAY)
+      (mouse-left-click)
+      (sleep MOUSEDELAY)
+      (set! t (thread start-mine))
+      (send button-start-stop set-label "停止")]
+     [else (send message-show-status set-label "请先绑定角色或先将你的矿船开到太空中")
+           (sleep 0.5)
+           (send message-show-status set-label "绑定窗口前，请确保窗口有一部分在屏幕外部")]))
+
+  (define (do-when-button-stop-clicked)
+    (kill-thread t)
+    (dm "LockInput" 0)
+    (unbind-char)
+    (send button-do-bind set-label "查找并绑定窗口")
+    (send button-start-stop set-label "开始"))
   frame)
 
 (define (find-and-bind-char char-name)
   (set! hwnd (dm "FindWindow" "triuiScreen" (string-append "EVE - " char-name)))
   (if (zero? hwnd)
       #f
-      (= 1 (dm "BindWindow" hwnd "dx2" "windows" "dx" 0))))
+      (= 1 (dm "BindWindow" hwnd "dx2" "dx" "dx" 0))))
 
 (define (unbind-char)
   (dm "UnBindWindow")
   (set! hwnd 0))
+
+(define (do-mine)
+  ;; 进行采矿
+  (mineral-select-index conf-miniplanet)
+  (sleep 4)
+  (dm "KeyPressChar" "q")
+  (wait-for-approach 3)
+  (dm "KeyPressChar" "F2")
+  (sleep 3))
+
+(define (shift-asteroid-belt)
+  (if (>= conf-asteroid-belt conf-max-asteroid-belt)
+      (set! conf-asteroid-belt 1)
+      (set! conf-asteroid-belt (+ 1 conf-asteroid-belt))))
+
+(define (shift-miniplant)
+  (if (>= conf-miniplanet 30)
+      (set! conf-miniplanet 1)
+      (set! conf-miniplanet (+ 1 conf-miniplanet))))
+
+(define (start-mine)
+  (goto-asteroid-belt conf-asteroid-belt)
+  (do-mine)
+  (wait-for-weapon 3)
+  ;; 武器停了，需要检查原因
+  (cond
+   [(store-is-full?) ;; 仓库满则回空间站，卸载矿物后继续采矿
+    (do-when-store-is-full)
+    (sleep 2)
+    (exit-space-station)
+    (set! conf-miniplanet 1)
+    (start-mine)]
+   [(not (target-is-miniplant?)) ;;有颗小行星被采空，目标丢失，换个miniplant重新开始
+    (shift-miniplant)
+    (start-mine)]
+   [else ;; 其他情况暂未处理，暂时采用切换行星带的做法
+    (shift-asteroid-belt)
+    (set! conf-miniplanet 1)
+    (start-mine)]))
+
+(define (target-is-miniplant?)
+  ;; 判断目标是否小行星
+  (zero? (dm "FindStrFast"
+             (posn-x pos-selected-object)
+             (posn-y pos-selected-object)
+             (+ (posn-x pos-selected-object) 90)
+             (+ (posn-y pos-selected-object) 50)
+             "小行星"
+             "0.0.75-0.0.0"
+             1.0
+             (box 0) (box 0))))
+
+(define main-window (create-main-window))
+(send main-window show #t)
